@@ -1,0 +1,57 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: credit
+      POSTGRES_PASSWORD: credit
+      POSTGRES_DB: creditdb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    depends_on:
+      - postgres
+    ports:
+      - "8000:8000"
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: credit
+      POSTGRES_PASSWORD: credit
+      POSTGRES_DB: creditdb
+      DATASET_PATH: /app/data/UCI_Credit_Card.csv
+      MODEL_PATH: /app/models/credit_model.joblib
+    volumes:
+      - ./models:/app/models
+      - ./UCI_Credit_Card.csv:/app/data/UCI_Credit_Card.csv
+
+  trainer:
+    build: ./backend
+    depends_on:
+      - postgres
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: credit
+      POSTGRES_PASSWORD: credit
+      POSTGRES_DB: creditdb
+      DATASET_PATH: /app/data/UCI_Credit_Card.csv
+      MODEL_PATH: /app/models/credit_model.joblib
+    volumes:
+      - ./models:/app/models
+      - ./UCI_Credit_Card.csv:/app/data/UCI_Credit_Card.csv
+    command: ["python", "train.py"]
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_API_URL: http://localhost:8000
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
